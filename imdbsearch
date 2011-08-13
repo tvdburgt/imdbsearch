@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+# Simple IMDb search script for imdbapi.com
+# By Tijmen van der Burgt
+
+use strict;
+use warnings;
+
+use WWW::Mechanize;
+use Getopt::Std;
+use JSON;
+
+my $mech = WWW::Mechanize->new(autocheck => 1);
+my $uri = URI->new("http://www.imdbapi.com");
+my %opts;
+
+if (@ARGV < 1) {
+    print "Usage: imdbsearch [-e] [title] [year]\n";
+    exit;
+}
+
+getopts("e", \%opts);
+
+build_uri(@ARGV);
+$mech->get($uri);
+print_movie();
+
+sub print_movie {
+    my $movie = decode_json($mech->content());
+    my $response = $movie->{Response};
+
+    die $response unless ($response eq "True");
+
+    print "Movie:             $movie->{Title} ($movie->{Year})\n";
+    print "Rating:            $movie->{Rating} ($movie->{Votes} votes)\n";
+    print "Genre:             $movie->{Genre}\n";
+    print "Director(s):       $movie->{Director}\n";
+    print "Writer(s):         $movie->{Writer}\n";
+    print "Actors:            $movie->{Actors}\n";
+    print "Runtime:           $movie->{Runtime}\n";
+    print "Plot:              $movie->{Plot}\n";
+}
+
+
+sub build_uri {
+    my ($title, $year) = @_;
+    my %query;
+
+    $query{"t"} =  $title if defined $title;
+    $query{"y"} =  $year if defined $year;
+    $query{"plot"} =  "full" if exists $opts{"e"};
+
+    $uri->query_form(%query);
+}
